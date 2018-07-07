@@ -39,8 +39,8 @@ from pyglet import gl
 #
 # Created by Oleg Klimov. Licensed on the same terms as the rest of OpenAI Gym.
 
-STATE_W = 128  # less than Atari 160x192
-STATE_H = 128
+STATE_W = 96   # less than Atari 160x192
+STATE_H = 96
 VIDEO_W = 600
 VIDEO_H = 400
 WINDOW_W = 1200
@@ -469,7 +469,7 @@ if __name__=="__main__":
         if k==key.LEFT  and a[0]==-1.0: a[0] = 0
         if k==key.RIGHT and a[0]==+1.0: a[0] = 0
         if k==key.UP:    a[1] = 0
-        if k==key.DOWN: a[2] = 0
+        if k==key.DOWN:  a[2] = 0
     env = CarRacing()
     env.render()
     record_video = False
@@ -479,39 +479,30 @@ if __name__=="__main__":
     env.viewer.window.on_key_release = key_release
     
     training_data = []
-    counter = 1
-    for root,subdirs,files in os.walk("data/"):
-        if len(files) > 0:
-        	counter = len(files)
+    file_name = 'data/training_data.npy'
+
+    if os.path.isfile(file_name):
+    	print('File exist, loading previous data')
+    	training_data = list(np.load(file_name))
+    else:
+    	print("new dataset")
+    	training_data = []
 
     while True:
         env.reset()
         total_reward = 0.0
         steps = 0
         restart = False
+
         while True:
             s, r, done, info = env.step(a)
             total_reward += r
-            print(a)
-            #output = [int(a[0]),int(a[1]),a[2]]
-            output = [0,0,0]
-            if a[0] == 1:
-            	output = [1,0,0]
-            if a[0] == -1:
-            	output = [0,1,0]
-            if a[1] == 1:
-            	output = [0,0,1]
-
-
-
+            output = [int(a[0]),int(a[1]),int(a[2])]
             print(output)
             training_data.append([s,output])
 
             if len(training_data) % 1000 == 0:
-                file_name = 'data/training_data_{}.npy'.format(len(training_data)*counter)
-                np.save(file_name,training_data)
-                training_data = []
-                counter += 1
+                np.save(file_name,training_data) 
                 print("saved model")
                 for i in range(10):
                     print("done!")

@@ -1,39 +1,40 @@
 import numpy as np
-import os
+import pandas as pd
+from collections import Counter
+from random import shuffle
 
-count = 0
-for root,subdirs,files in os.walk("data/"):
-	count = len(files)
+train_data = np.load('data/training_data.npy')
 
+df = pd.DataFrame(train_data)
+print(df.head())
+print(Counter(df[1].apply(str)))
+print(df[1])
+lefts = []
+rights = []
+no_turns = []
 
-left = []
-right = []
-top = []
-
-for i in range(count):
-	data = np.load("data/training_data_{}.npy".format((i+1)*1000))
-	for row in data:
-		if row[1][0] == 1:
-			left.append(row)
-		if row[1][1] == 1:
-			right.append(row)
-		if row[1][2] == 1:
-			top.append(row)
+shuffle(train_data)
 
 
-lengths = np.array([len(left),len(right),len(top)])
+for data in train_data:
+    img = data[0]
+    choice = list(data[1])
+    if choice == [-1,0,0]:
+    	lefts.append([img,choice])
+    elif choice == [1,0,0]:
+        rights.append([img,choice])
+    elif choice == [0,0,0]:
+        no_turns.append([img,choice])
 
-data = [left,right,top]
 
+no_turns = no_turns[:len(lefts)][:len(rights)]
+lefts = lefts[:len(no_turns)]
+rights = rights[:len(no_turns)]
 
+print(len(lefts),len(rights),len(no_turns))
 
-final_data = []
+final_data = no_turns + lefts + rights
 
-size = len(data[np.argmin(lengths)])
+shuffle(final_data)
 
-for i in data:
-	np.random.shuffle(i)
-	final_data+=i[:size]
-
-print(size,len(final_data))
-np.save("final_data.npy",final_data)
+np.save('data/training_data_balanced.npy',final_data)
