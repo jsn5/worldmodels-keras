@@ -1,6 +1,7 @@
 import sys, math
 import numpy as np
-import os
+from model import cnn
+from time import sleep
 import Box2D
 from Box2D.b2 import (edgeShape, circleShape, fixtureDef, polygonShape, revoluteJointDef, contactListener)
 
@@ -39,7 +40,7 @@ from pyglet import gl
 #
 # Created by Oleg Klimov. Licensed on the same terms as the rest of OpenAI Gym.
 
-STATE_W = 128  # less than Atari 160x192
+STATE_W = 128   # less than Atari 160x192
 STATE_H = 128
 VIDEO_W = 600
 VIDEO_H = 400
@@ -375,7 +376,6 @@ class CarRacing(gym.Env):
             arr = arr.reshape(VP_H, VP_W, 4)
             arr = arr[::-1, :, 0:3]
 
-
         if mode=="rgb_array" and not self.human_render: # agent can call or not call env.render() itself when recording video.
             win.flip()
 
@@ -469,7 +469,7 @@ if __name__=="__main__":
         if k==key.LEFT  and a[0]==-1.0: a[0] = 0
         if k==key.RIGHT and a[0]==+1.0: a[0] = 0
         if k==key.UP:    a[1] = 0
-        if k==key.DOWN: a[2] = 0
+        if k==key.DOWN:  a[2] = 0
     env = CarRacing()
     env.render()
     record_video = False
@@ -478,12 +478,11 @@ if __name__=="__main__":
     env.viewer.window.on_key_press = key_press
     env.viewer.window.on_key_release = key_release
     
-    training_data = []
-    counter = 1
-    for root,subdirs,files in os.walk("data/"):
-        if len(files) > 0:
-        	counter = len(files)
 
+    model = cnn()
+    # model.compile(loss='categorical_crossentropy',
+    #          optimizer='adam',
+    #          metrics=['accuracy'])
     while True:
         env.reset()
         total_reward = 0.0
@@ -491,34 +490,37 @@ if __name__=="__main__":
         restart = False
         while True:
             s, r, done, info = env.step(a)
+            
+
+            inp = np.array(s).astype('float32') / 255
+            inp = inp.reshape(-1,128,128,3)
+            prediction = model.predict_classes(inp)
+            pred = prediction[0]
+            print(pred)
+
+            # if index == 2:
+            #     key_press(key.UP,'')
+            #     sleep(1)
+            #     key_release(key.UP,'')
+            # elif pred[index] == 3:
+            #     key_press(key.DOWN,'')
+            #     sleep(1)
+            #     key_release(key.DOWN,'')
+            # elif index == 0:
+            #     key_press(key.LEFT,'')
+            #     sleep(1)
+            #     key_release(key.LEFT,'')
+            # elif index == 1:
+            #     key_press(key.RIGHT,'')
+            #     sleep(1)
+            #     key_release(key.RIGHT,'')
             total_reward += r
-            print(a)
-            #output = [int(a[0]),int(a[1]),a[2]]
-            output = [0,0,0]
-            if a[0] == 1:
-            	output = [1,0,0]
-            if a[0] == -1:
-            	output = [0,1,0]
-            if a[1] == 1:
-            	output = [0,0,1]
-
-
-
-            print(output)
-            training_data.append([s,output])
-
-            if len(training_data) % 1000 == 0:
-                file_name = 'data/training_data_{}.npy'.format(len(training_data)*counter)
-                np.save(file_name,training_data)
-                training_data = []
-                counter += 1
-                print("saved model")
-                for i in range(10):
-                    print("done!")
             if steps % 200 == 0 or done:
                 print("\naction " + str(["{:+0.2f}".format(x) for x in a]))
-               	print("step {} total_reward {:+0.2f}".format(steps, total_reward))
-               	
+                print("step {} total_reward {:+0.2f}".format(steps, total_reward))
+                #import matplotlib.pyplot as plt
+                #plt.imshow(s)
+                #plt.savefig("test.jpeg")
             steps += 1
             if not record_video: # Faster, but you can as well call env.render() every time to play full window.
                 env.render()
