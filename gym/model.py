@@ -16,7 +16,7 @@ def cnn():
     model.add(tf.keras.layers.Flatten())
     model.add(tf.keras.layers.Dense(128,activation='relu'))
     model.add(tf.keras.layers.Dropout(0.5))
-    model.add(tf.keras.layers.Dense(3,activation='softmax'))
+    model.add(tf.keras.layers.Dense(4,activation='softmax'))
     return model
 
 
@@ -46,15 +46,13 @@ if __name__ == "__main__":
 	test_x = []
 	test_y = []
 
-	for row in train_data:
-		if row[1] != [0,0,0]:
-			train_x.append(row[0])
-			train_y.append(row[1])
+	for row in train_data:	
+		train_x.append(row[0])
+		train_y.append(row[1])
 
 	for row in test_data:
-		if row[1] != [0,0,0]:
-			test_x.append(row[0])
-			test_y.append(row[1])
+		test_x.append(row[0])
+		test_y.append(row[1])
 
 	train_x = np.array(train_x).astype('float32')/255
 	train_y = np.array(train_y)
@@ -70,6 +68,6 @@ if __name__ == "__main__":
 	model.fit(train_x,
 			  train_y,
 			  batch_size=64,
-			  epochs=2,
+			  epochs=10,
 			  validation_data=(test_x,test_y),
 			  callbacks=[checkpointer])

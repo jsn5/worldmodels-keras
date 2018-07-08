@@ -39,8 +39,8 @@ from pyglet import gl
 #
 # Created by Oleg Klimov. Licensed on the same terms as the rest of OpenAI Gym.
 
-STATE_W = 96   # less than Atari 160x192
-STATE_H = 96
+STATE_W = 128  # less than Atari 160x192
+STATE_H = 128
 VIDEO_W = 600
 VIDEO_H = 400
 WINDOW_W = 1200
@@ -443,6 +443,7 @@ class CarRacing(gym.Env):
             gl.glVertex3f((place+val)*s, 2*h, 0)
             gl.glVertex3f((place+0)*s, 2*h, 0)
         true_speed = np.sqrt(np.square(self.car.hull.linearVelocity[0]) + np.square(self.car.hull.linearVelocity[1]))
+        self.speed = true_speed
         vertical_ind(5, 0.02*true_speed, (1,1,1))
         vertical_ind(7, 0.01*self.car.wheels[0].omega, (0.0,0,1)) # ABS sensors
         vertical_ind(8, 0.01*self.car.wheels[1].omega, (0.0,0,1))
@@ -469,7 +470,7 @@ if __name__=="__main__":
         if k==key.LEFT  and a[0]==-1.0: a[0] = 0
         if k==key.RIGHT and a[0]==+1.0: a[0] = 0
         if k==key.UP:    a[1] = 0
-        if k==key.DOWN:  a[2] = 0
+        if k==key.DOWN: a[2] = 0
     env = CarRacing()
     env.render()
     record_video = False
@@ -479,30 +480,49 @@ if __name__=="__main__":
     env.viewer.window.on_key_release = key_release
     
     training_data = []
-    file_name = 'data/training_data.npy'
-
-    if os.path.isfile(file_name):
-    	print('File exist, loading previous data')
-    	training_data = list(np.load(file_name))
-    else:
-    	print("new dataset")
-    	training_data = []
-
+    counter = 1
+    for root,subdirs,files in os.walk("data/"):
+        if len(files) > 0:
+        	counter = len(files)
+    env.reset()
+    s, r, done, info = env.step(a)
+    temp = s
     while True:
         env.reset()
         total_reward = 0.0
         steps = 0
         restart = False
-
         while True:
+
             s, r, done, info = env.step(a)
+       	    if env.speed > 35:
+                key_press(key.DOWN,'')
+            else:
+                key_release(key.DOWN,'')
             total_reward += r
-            output = [int(a[0]),int(a[1]),int(a[2])]
+            #output = [int(a[0]),int(a[1]),a[2]]
+            output = [0,0,0,0]
+            if a[0] == 0.0 and a[1] == 0.0 and a[2] == 0.0:
+            	output = [1,0,0,0]
+            elif a[1] == 1:
+            	output = [0,1,0,0]
+            elif a[0] == -1:
+            	output = [0,0,1,0]
+            elif a[0] == 1:
+            	output = [0,0,0,1]
+
+
+
             print(output)
-            training_data.append([s,output])
+            training_data.append([temp,output])
+            temp = s
+            #print(temp)
 
             if len(training_data) % 1000 == 0:
-                np.save(file_name,training_data) 
+                file_name = 'data/training_data_{}.npy'.format(len(training_data)*counter)
+                np.save(file_name,training_data)
+                training_data = []
+                counter += 1
                 print("saved model")
                 for i in range(10):
                     print("done!")
@@ -514,4 +534,5 @@ if __name__=="__main__":
             if not record_video: # Faster, but you can as well call env.render() every time to play full window.
                 env.render()
             if done or restart: break
+            
     env.close()
