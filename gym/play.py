@@ -443,6 +443,7 @@ class CarRacing(gym.Env):
             gl.glVertex3f((place+val)*s, 2*h, 0)
             gl.glVertex3f((place+0)*s, 2*h, 0)
         true_speed = np.sqrt(np.square(self.car.hull.linearVelocity[0]) + np.square(self.car.hull.linearVelocity[1]))
+        self.speed = true_speed
         vertical_ind(5, 0.02*true_speed, (1,1,1))
         vertical_ind(7, 0.01*self.car.wheels[0].omega, (0.0,0,1)) # ABS sensors
         vertical_ind(8, 0.01*self.car.wheels[1].omega, (0.0,0,1))
@@ -477,50 +478,74 @@ if __name__=="__main__":
         env.monitor.start('/tmp/video-test', force=True)
     env.viewer.window.on_key_press = key_press
     env.viewer.window.on_key_release = key_release
+
+    
     
 
     model = cnn()
-    # model.compile(loss='categorical_crossentropy',
-    #          optimizer='adam',
-    #          metrics=['accuracy'])
+    model.load_weights("weights.hdf5")
+    left_turn_count = 0
+    right_turn_count = 0
     while True:
         env.reset()
         total_reward = 0.0
         steps = 0
         restart = False
+
+
         while True:
             s, r, done, info = env.step(a)
-            
+            if left_turn_count == 5:
+                a = [1,0,0.0]
+                left_turn_count = 0
+                right_turn_count += 1
+                continue
+            if right_turn_count == 5:
+                a = [-1,0,0.0]
+                right_turn_count = 0
+                left_turn_count += 1
+                continue
 
             inp = np.array(s).astype('float32') / 255
             inp = inp.reshape(-1,128,128,3)
             prediction = model.predict_classes(inp)
             pred = prediction[0]
-            print(pred)
+            classes=['no_accel','accel','left','right']
+            print(classes[pred])
+            
 
-            # if index == 2:
-            #     key_press(key.UP,'')
-            #     sleep(1)
-            #     key_release(key.UP,'')
-            # elif pred[index] == 3:
-            #     key_press(key.DOWN,'')
-            #     sleep(1)
-            #     key_release(key.DOWN,'')
-            # elif index == 0:
-            #     key_press(key.LEFT,'')
-            #     sleep(1)
-            #     key_release(key.LEFT,'')
-            # elif index == 1:
-            #     key_press(key.RIGHT,'')
-            #     sleep(1)
-            #     key_release(key.RIGHT,'')
+            if env.speed > 35:
+                key_press(key.DOWN,'')
+                key_release(key.UP,'')
+            else:
+                key_release(key.DOWN,'')
+            if pred == 2:
+                key_press(key.LEFT,'')
+                key_release(key.RIGHT,'')
+                key_release(key.UP,'')
+                left_turn_count +=1
+            if pred == 3:
+                key_press(key.RIGHT,'')
+                key_release(key.LEFT,'')
+                key_release(key.UP,'')
+                right_turn_count +=1
+            if pred == 0:
+                key_release(key.LEFT,'')
+                key_release(key.RIGHT,'')
+                key_release(key.UP,'')
+                left_turn_count = 0
+                right_turn_count = 0
+            if pred == 1:
+                key_press(key.UP,'')
+                key_release(key.LEFT,'')
+                key_release(key.RIGHT,'')
+                left_turn_count = 0
+                right_turn_count = 0
+                
             total_reward += r
-            if steps % 200 == 0 or done:
-                print("\naction " + str(["{:+0.2f}".format(x) for x in a]))
-                print("step {} total_reward {:+0.2f}".format(steps, total_reward))
-                #import matplotlib.pyplot as plt
-                #plt.imshow(s)
-                #plt.savefig("test.jpeg")
+            #import matplotlib.pyplot as plt
+            #plt.imshow(s)
+            #plt.savefig("test.jpeg")
             steps += 1
             if not record_video: # Faster, but you can as well call env.render() every time to play full window.
                 env.render()
