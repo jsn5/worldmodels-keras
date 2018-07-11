@@ -93,11 +93,10 @@ if __name__ == '__main__':
 		vae.load_weights('vae_cnn.h5')
 		image = cv2.imread("input.jpg")
 		while True:
-			image = cv2.resize(image,(128,128))
-			image = np.array(image).astype("float32") / 255
-			image = image.reshape(1,128,128,3)
-			output = vae.predict(image)
-			output = np.array(output).reshape(128,128,3)
+			mu, sigma = 0, 0.5
+			random_latent_input = np.random.normal(mu,sigma,size=(2,2))
+			output = decoder.predict(random_latent_input)
+			output = np.array(output[1]).reshape(128,128,3)
 			output = output * 255
 			output = np.array(output).astype("uint8")
 			image = output
