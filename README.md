@@ -5,4 +5,4 @@
 
 Trying to recreate World Models by @hardmaru 
 
-![Sample image](https://github.com/jsn5/computer_vision_experiments/blob/master/input.jpg)
+![Sample image](https://github.com/jsn5/worldmodels-keras/blob/master/vae.gif)
